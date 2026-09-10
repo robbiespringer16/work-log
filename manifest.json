@@ -1,7 +1,7 @@
 {
-  "name": "Work Log",
-  "short_name": "Work Log",
-  "description": "Simple handyman job tracker — open, done, reference",
+  "name": "Seaside Solutions Work Log",
+  "short_name": "Seaside Log",
+  "description": "Seaside Solutions LLC — job tracker (open, done, reference)",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f5f7",
@@ -12,7 +12,13 @@
       "src": "icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

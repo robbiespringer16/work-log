@@ -1,9 +1,11 @@
-const CACHE = 'worklog-v5-pages8';
+const CACHE = 'worklog-v5-pages10';
 const FILES = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png'
+  './icon-192.png',
+  './apple-touch-icon.png',
+  './logo.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -24,7 +26,6 @@ self.addEventListener('message', (e) => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
-// Network-first for app files so home-screen icon picks up updates when online.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
