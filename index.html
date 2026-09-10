@@ -561,31 +561,39 @@
       position: relative;
       overflow: hidden;
       background: #000;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
-    .lightbox-scroll {
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-      touch-action: pan-x pan-y pinch-zoom;
-      text-align: center;
+    .lightbox-viewport {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
     }
-    .lightbox-scroll img {
-      display: block;
-      margin: 0 auto;
-      width: auto;
-      height: auto;
+    .lightbox-viewport img {
       max-width: 100%;
       max-height: 100%;
+      width: auto;
+      height: auto;
       object-fit: contain;
-      user-select: none;
-      -webkit-user-select: none;
+      transform-origin: center center;
+      will-change: transform;
+      pointer-events: none;
       -webkit-user-drag: none;
     }
-    .lightbox-scroll.zoomed img {
-      max-width: none;
-      max-height: none;
+    .lightbox-hint {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 10px;
+      text-align: center;
+      font-size: 0.75rem;
+      color: rgba(255,255,255,0.55);
+      pointer-events: none;
+      z-index: 1;
     }
     .lightbox-actions {
       display: flex;
@@ -775,15 +783,14 @@
       <button type="button" class="btn btn-danger" id="lightboxDelete">Delete</button>
     </div>
     <div class="lightbox-stage" id="lightboxStage">
-      <div class="lightbox-scroll" id="lightboxScroll">
+      <div class="lightbox-viewport" id="lightboxViewport">
         <img id="lightboxImg" alt="Reference" draggable="false" />
       </div>
+      <div class="lightbox-hint">Swipe for next · Pinch to zoom</div>
     </div>
     <div class="lightbox-actions">
       <button type="button" class="btn btn-ghost" id="lightboxPrev">Prev</button>
-      <button type="button" class="btn btn-ghost" id="lightboxZoomOut">−</button>
       <button type="button" class="btn btn-ghost" id="lightboxZoomReset">Fit</button>
-      <button type="button" class="btn btn-ghost" id="lightboxZoomIn">+</button>
       <button type="button" class="btn btn-ghost" id="lightboxNext">Next</button>
     </div>
   </div>
@@ -1066,10 +1073,11 @@
   let lightboxId = null;
   let lightboxIds = [];
   let lightboxIndex = 0;
-  let lbZoom = 1; // 1 = fit width; higher = zoomed, pan by scrolling
-  let lbSwipeX = null;
-  let lbSwipeY = null;
-  let lbSwipeT = 0;
+  let lbPhotoMap = {};
+  let lbScale = 1;
+  let lbTx = 0;
+  let lbTy = 0;
+  let lbGest = null;
   let confirmAction = null;
 
   function setTab(name) {
@@ -1499,6 +1507,41 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     }
   });
 
+  function lbImg() { return $('#lightboxImg'); }
+
+  function lbApply() {
+    const img = lbImg();
+    if (!img) return;
+    img.style.transform = 'translate3d(' + lbTx + 'px,' + lbTy + 'px,0) scale(' + lbScale + ')';
+  }
+
+  function lbResetView() {
+    lbScale = 1;
+    lbTx = 0;
+    lbTy = 0;
+    lbApply();
+  }
+
+  function lbClamp() {
+    if (lbScale <= 1.01) {
+      lbScale = 1;
+      lbTx = 0;
+      lbTy = 0;
+      return;
+    }
+    const stage = $('#lightboxStage');
+    const img = lbImg();
+    if (!stage || !img) return;
+    const sw = stage.clientWidth;
+    const sh = stage.clientHeight;
+    const iw = img.offsetWidth * lbScale;
+    const ih = img.offsetHeight * lbScale;
+    const maxX = Math.max(0, (iw - sw) / 2);
+    const maxY = Math.max(0, (ih - sh) / 2);
+    lbTx = Math.min(maxX, Math.max(-maxX, lbTx));
+    lbTy = Math.min(maxY, Math.max(-maxY, lbTy));
+  }
+
   function lbUpdateCount() {
     $('#lightboxCount').textContent = (lightboxIndex + 1) + ' / ' + Math.max(lightboxIds.length, 1);
     lightboxId = lightboxIds[lightboxIndex] || null;
@@ -1507,47 +1550,18 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     $('#lightboxNext').disabled = !many;
   }
 
-  function lbApplyZoom() {
-    const img = $('#lightboxImg');
-    const scroll = $('#lightboxScroll');
-    if (!img || !scroll) return;
-    if (lbZoom <= 1.01) {
-      scroll.classList.remove('zoomed');
-      img.style.width = '';
-      img.style.maxWidth = '100%';
-      img.style.maxHeight = '100%';
-      scroll.scrollLeft = 0;
-      scroll.scrollTop = 0;
-    } else {
-      scroll.classList.add('zoomed');
-      img.style.maxWidth = 'none';
-      img.style.maxHeight = 'none';
-      img.style.width = (lbZoom * 100) + '%';
-    }
-  }
-
-  function lbSetZoom(z) {
-    lbZoom = Math.min(4, Math.max(1, z));
-    lbApplyZoom();
-  }
-
   function lbShowCurrent() {
     const id = lightboxIds[lightboxIndex];
     if (!id) return;
     lightboxId = id;
-    // photos loaded into map on open
     const src = lbPhotoMap[id];
     if (!src) return;
-    const img = $('#lightboxImg');
-    img.onload = () => {
-      lbSetZoom(1);
-    };
+    const img = lbImg();
+    img.onload = () => lbResetView();
     img.src = src;
-    lbSetZoom(1);
+    lbResetView();
     lbUpdateCount();
   }
-
-  let lbPhotoMap = {};
 
   async function openLightboxAt(id) {
     const photos = await refAll();
@@ -1562,17 +1576,27 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
 
   function closeLightbox() {
     $('#lightbox').classList.remove('show');
-    $('#lightboxImg').removeAttribute('src');
+    const img = lbImg();
+    if (img) img.removeAttribute('src');
     lightboxId = null;
     lightboxIds = [];
     lbPhotoMap = {};
-    lbZoom = 1;
+    lbGest = null;
+    lbResetView();
   }
 
   function lbGo(delta) {
     if (!lightboxIds.length) return;
     lightboxIndex = (lightboxIndex + delta + lightboxIds.length) % lightboxIds.length;
     lbShowCurrent();
+  }
+
+  function lbDist(a, b) {
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  }
+
+  function lbMid(a, b) {
+    return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 };
   }
 
   $('#refGrid').addEventListener('click', async (ev) => {
@@ -1584,9 +1608,7 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
   $('#lightboxClose').addEventListener('click', closeLightbox);
   $('#lightboxPrev').addEventListener('click', () => lbGo(-1));
   $('#lightboxNext').addEventListener('click', () => lbGo(1));
-  $('#lightboxZoomIn').addEventListener('click', () => lbSetZoom(lbZoom + 0.5));
-  $('#lightboxZoomOut').addEventListener('click', () => lbSetZoom(lbZoom - 0.5));
-  $('#lightboxZoomReset').addEventListener('click', () => lbSetZoom(1));
+  $('#lightboxZoomReset').addEventListener('click', () => lbResetView());
 
   $('#lightboxDelete').addEventListener('click', () => {
     if (!lightboxId) return;
@@ -1610,40 +1632,139 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     });
   });
 
-  // Swipe left/right between photos when not zoomed (no preventDefault — keeps scroll working when zoomed)
   const stage = $('#lightboxStage');
-  stage.addEventListener('touchstart', (ev) => {
-    if (ev.touches.length !== 1) return;
-    lbSwipeX = ev.touches[0].clientX;
-    lbSwipeY = ev.touches[0].clientY;
-    lbSwipeT = Date.now();
-  }, { passive: true });
 
-  stage.addEventListener('touchend', (ev) => {
-    if (lbSwipeX == null || lbZoom > 1.05) {
-      lbSwipeX = null;
+  stage.addEventListener('touchstart', (ev) => {
+    if (!$('#lightbox').classList.contains('show')) return;
+    if (ev.touches.length === 2) {
+      ev.preventDefault();
+      const a = ev.touches[0];
+      const b = ev.touches[1];
+      lbGest = {
+        mode: 'pinch',
+        startDist: lbDist(a, b) || 1,
+        startScale: lbScale,
+        startTx: lbTx,
+        startTy: lbTy,
+        startMid: lbMid(a, b)
+      };
       return;
     }
-    const t = ev.changedTouches[0];
-    const dx = t.clientX - lbSwipeX;
-    const dy = t.clientY - lbSwipeY;
-    const dt = Date.now() - lbSwipeT;
-    lbSwipeX = null;
-    if (dt > 600) return;
-    if (Math.abs(dx) < 50) return;
-    if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
-    if (dx < 0) lbGo(1);
-    else lbGo(-1);
-  }, { passive: true });
+    if (ev.touches.length === 1) {
+      const t = ev.touches[0];
+      lbGest = {
+        mode: lbScale > 1.05 ? 'pan' : 'swipe',
+        x: t.clientX,
+        y: t.clientY,
+        startTx: lbTx,
+        startTy: lbTy,
+        moved: false,
+        t: Date.now()
+      };
+    }
+  }, { passive: false });
+
+  stage.addEventListener('touchmove', (ev) => {
+    if (!lbGest) return;
+    if (lbGest.mode === 'pinch' && ev.touches.length >= 2) {
+      ev.preventDefault();
+      const a = ev.touches[0];
+      const b = ev.touches[1];
+      const dist = lbDist(a, b) || 1;
+      const mid = lbMid(a, b);
+      const next = Math.min(5, Math.max(1, lbGest.startScale * (dist / lbGest.startDist)));
+      // keep roughly centered on pinch mid
+      const stageEl = stage.getBoundingClientRect();
+      const ox = lbGest.startMid.x - stageEl.left - stageEl.width / 2;
+      const oy = lbGest.startMid.y - stageEl.top - stageEl.height / 2;
+      const ratio = next / lbGest.startScale;
+      lbTx = lbGest.startTx + (mid.x - lbGest.startMid.x) - ox * (ratio - 1);
+      lbTy = lbGest.startTy + (mid.y - lbGest.startMid.y) - oy * (ratio - 1);
+      lbScale = next;
+      lbClamp();
+      lbApply();
+      return;
+    }
+    if ((lbGest.mode === 'pan' || lbGest.mode === 'swipe') && ev.touches.length === 1) {
+      const t = ev.touches[0];
+      const dx = t.clientX - lbGest.x;
+      const dy = t.clientY - lbGest.y;
+      if (Math.hypot(dx, dy) > 8) lbGest.moved = true;
+      if (lbGest.mode === 'pan' || lbScale > 1.05) {
+        ev.preventDefault();
+        lbTx = lbGest.startTx + dx;
+        lbTy = lbGest.startTy + dy;
+        lbClamp();
+        lbApply();
+      } else if (lbGest.mode === 'swipe' && Math.abs(dx) > Math.abs(dy)) {
+        ev.preventDefault();
+        // rubber-band preview
+        lbTx = dx * 0.85;
+        lbTy = 0;
+        lbApply();
+      }
+    }
+  }, { passive: false });
+
+  stage.addEventListener('touchend', (ev) => {
+    if (!lbGest) return;
+    if (lbGest.mode === 'pinch') {
+      if (ev.touches.length < 2) {
+        if (lbScale < 1.05) lbResetView();
+        else lbClamp(), lbApply();
+        if (ev.touches.length === 1) {
+          const t = ev.touches[0];
+          lbGest = {
+            mode: 'pan',
+            x: t.clientX,
+            y: t.clientY,
+            startTx: lbTx,
+            startTy: lbTy,
+            moved: true,
+            t: Date.now()
+          };
+        } else {
+          lbGest = null;
+        }
+      }
+      return;
+    }
+
+    if (lbGest.mode === 'swipe' && ev.changedTouches.length) {
+      const t = ev.changedTouches[0];
+      const dx = t.clientX - lbGest.x;
+      const dy = t.clientY - lbGest.y;
+      const dt = Date.now() - lbGest.t;
+      if (lbScale <= 1.05 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.1 && dt < 700) {
+        lbGo(dx < 0 ? 1 : -1);
+      } else {
+        // snap back if we were preview-dragging
+        if (lbScale <= 1.05) lbResetView();
+        else { lbClamp(); lbApply(); }
+      }
+      lbGest = null;
+      return;
+    }
+
+    if (lbGest.mode === 'pan') {
+      lbClamp();
+      lbApply();
+      if (ev.touches.length === 0) lbGest = null;
+    }
+  });
+
+  stage.addEventListener('touchcancel', () => {
+    lbGest = null;
+    if (lbScale <= 1.05) lbResetView();
+    else { lbClamp(); lbApply(); }
+  });
 
   document.addEventListener('keydown', (ev) => {
     if (!$('#lightbox').classList.contains('show')) return;
     if (ev.key === 'Escape') closeLightbox();
     if (ev.key === 'ArrowLeft') lbGo(-1);
     if (ev.key === 'ArrowRight') lbGo(1);
-    if (ev.key === '+' || ev.key === '=') lbSetZoom(lbZoom + 0.5);
-    if (ev.key === '-') lbSetZoom(lbZoom - 0.5);
-    if (ev.key === '0') lbSetZoom(1);
+    if (ev.key === '0') lbResetView();
   });
 
   // ---------- backup / restore ----------
@@ -1711,7 +1832,7 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
   // ---------- PWA ----------
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=7').catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=8').catch(() => {});
     });
   }
 

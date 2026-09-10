@@ -1,4 +1,4 @@
-const CACHE = 'worklog-v5-pages6';
+const CACHE = 'worklog-v5-pages7';
 const FILES = [
   './',
   './index.html',
