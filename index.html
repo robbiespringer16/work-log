@@ -362,7 +362,7 @@
       background: rgba(15, 23, 42, 0.40);
       backdrop-filter: blur(4px);
       -webkit-backdrop-filter: blur(4px);
-      z-index: 80;
+      z-index: 120;
       display: none;
       align-items: flex-end;
       justify-content: center;
@@ -484,7 +484,7 @@
       border-radius: 12px;
       font-size: 0.9rem;
       font-weight: 500;
-      z-index: 100;
+      z-index: 130;
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s, transform 0.2s;
@@ -526,7 +526,7 @@
       position: fixed;
       inset: 0;
       background: rgba(0,0,0,0.96);
-      z-index: 90;
+      z-index: 100;
       display: none;
       flex-direction: column;
       padding: 0;
@@ -557,49 +557,26 @@
     }
     .lightbox-stage {
       flex: 1;
-      position: relative;
       min-height: 0;
-      overflow: hidden;
-    }
-    .lightbox-track {
-      display: flex;
-      height: 100%;
-      width: 100%;
-      overflow-x: auto;
-      overflow-y: hidden;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .lightbox-track::-webkit-scrollbar { display: none; }
-    .lightbox-track.zoomed {
-      overflow-x: hidden;
-      scroll-snap-type: none;
-    }
-    .lightbox-slide {
-      flex: 0 0 100%;
-      width: 100%;
-      height: 100%;
-      scroll-snap-align: center;
-      scroll-snap-stop: always;
       position: relative;
       overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: pan-x;
+      background: #000;
     }
-    .lightbox-track.zoomed .lightbox-slide {
-      touch-action: none;
+    .lightbox-scroll {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      touch-action: pan-x pan-y pinch-zoom;
+      text-align: center;
     }
-    .lightbox-slide img {
-      max-width: 100%;
-      max-height: 100%;
-      width: auto;
+    .lightbox-scroll img {
+      display: block;
+      margin: 0 auto;
+      width: 100%;
       height: auto;
-      object-fit: contain;
-      transform-origin: center center;
-      will-change: transform;
+      max-width: none;
       user-select: none;
       -webkit-user-select: none;
       -webkit-user-drag: none;
@@ -614,11 +591,11 @@
       max-width: var(--max);
       margin: 0 auto;
       flex-shrink: 0;
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.7);
       z-index: 2;
       box-sizing: border-box;
     }
-    .lightbox-actions .btn { flex: 1; min-width: 70px; }
+    .lightbox-actions .btn { flex: 1; min-width: 64px; }
 
     .data-box {
       margin-top: 28px;
@@ -792,7 +769,9 @@
       <button type="button" class="btn btn-danger" id="lightboxDelete">Delete</button>
     </div>
     <div class="lightbox-stage" id="lightboxStage">
-      <div class="lightbox-track" id="lightboxTrack"></div>
+      <div class="lightbox-scroll" id="lightboxScroll">
+        <img id="lightboxImg" alt="Reference" draggable="false" />
+      </div>
     </div>
     <div class="lightbox-actions">
       <button type="button" class="btn btn-ghost" id="lightboxPrev">Prev</button>
@@ -1062,12 +1041,10 @@
   let lightboxId = null;
   let lightboxIds = [];
   let lightboxIndex = 0;
-  let lbScale = 1;
-  let lbTx = 0;
-  let lbTy = 0;
-  let lbLastTap = 0;
-  let lbTouchMode = null; // pan | pinch | null
-  let lbTouchCache = [];
+  let lbZoom = 1; // 1 = fit width; higher = zoomed, pan by scrolling
+  let lbSwipeX = null;
+  let lbSwipeY = null;
+  let lbSwipeT = 0;
   let confirmAction = null;
 
   function setTab(name) {
@@ -1497,49 +1474,6 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     }
   });
 
-  function lbActiveSlide() {
-    return $('#lightboxTrack')?.children[lightboxIndex] || null;
-  }
-
-  function lbActiveImg() {
-    const slide = lbActiveSlide();
-    return slide ? slide.querySelector('img') : null;
-  }
-
-  function lbApplyTransform() {
-    const img = lbActiveImg();
-    if (!img) return;
-    img.style.transform = 'translate(' + lbTx + 'px, ' + lbTy + 'px) scale(' + lbScale + ')';
-    const track = $('#lightboxTrack');
-    track.classList.toggle('zoomed', lbScale > 1.02);
-  }
-
-  function lbResetZoom() {
-    lbScale = 1;
-    lbTx = 0;
-    lbTy = 0;
-    lbApplyTransform();
-  }
-
-  function lbClampPan() {
-    if (lbScale <= 1.02) {
-      lbTx = 0;
-      lbTy = 0;
-      return;
-    }
-    const slide = lbActiveSlide();
-    const img = lbActiveImg();
-    if (!slide || !img) return;
-    const sw = slide.clientWidth;
-    const sh = slide.clientHeight;
-    const iw = img.clientWidth * lbScale;
-    const ih = img.clientHeight * lbScale;
-    const maxX = Math.max(0, (iw - sw) / 2 + 24);
-    const maxY = Math.max(0, (ih - sh) / 2 + 24);
-    lbTx = Math.min(maxX, Math.max(-maxX, lbTx));
-    lbTy = Math.min(maxY, Math.max(-maxY, lbTy));
-  }
-
   function lbUpdateCount() {
     $('#lightboxCount').textContent = (lightboxIndex + 1) + ' / ' + Math.max(lightboxIds.length, 1);
     lightboxId = lightboxIds[lightboxIndex] || null;
@@ -1548,66 +1482,64 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     $('#lightboxNext').disabled = !many;
   }
 
-  function lbScrollToIndex(idx, smooth) {
-    const track = $('#lightboxTrack');
-    const w = track.clientWidth || 1;
-    track.scrollTo({ left: idx * w, behavior: smooth ? 'smooth' : 'auto' });
+  function lbApplyZoom() {
+    const img = $('#lightboxImg');
+    const scroll = $('#lightboxScroll');
+    if (!img || !scroll) return;
+    img.style.width = (lbZoom * 100) + '%';
+    if (lbZoom <= 1) {
+      scroll.scrollLeft = 0;
+      scroll.scrollTop = 0;
+    }
   }
+
+  function lbSetZoom(z) {
+    lbZoom = Math.min(4, Math.max(1, z));
+    lbApplyZoom();
+  }
+
+  function lbShowCurrent() {
+    const id = lightboxIds[lightboxIndex];
+    if (!id) return;
+    lightboxId = id;
+    // photos loaded into map on open
+    const src = lbPhotoMap[id];
+    if (!src) return;
+    const img = $('#lightboxImg');
+    img.onload = () => {
+      lbSetZoom(1);
+    };
+    img.src = src;
+    lbSetZoom(1);
+    lbUpdateCount();
+  }
+
+  let lbPhotoMap = {};
 
   async function openLightboxAt(id) {
     const photos = await refAll();
     lightboxIds = photos.map((p) => p.id);
+    lbPhotoMap = {};
+    photos.forEach((p) => { lbPhotoMap[p.id] = p.dataUrl; });
     lightboxIndex = Math.max(0, lightboxIds.indexOf(id));
-    const track = $('#lightboxTrack');
-    track.innerHTML = photos.map((p) =>
-      '<div class="lightbox-slide" data-id="' + p.id + '">' +
-        '<img src="' + p.dataUrl + '" alt="Reference" draggable="false" />' +
-      '</div>'
-    ).join('');
+    if (!lightboxIds.length) return;
     $('#lightbox').classList.add('show');
-    lbResetZoom();
-    lbUpdateCount();
-    requestAnimationFrame(() => {
-      lbScrollToIndex(lightboxIndex, false);
-      lbResetZoom();
-    });
+    lbShowCurrent();
   }
 
   function closeLightbox() {
     $('#lightbox').classList.remove('show');
-    $('#lightboxTrack').innerHTML = '';
+    $('#lightboxImg').removeAttribute('src');
     lightboxId = null;
     lightboxIds = [];
-    lbScale = 1;
-    lbTx = 0;
-    lbTy = 0;
+    lbPhotoMap = {};
+    lbZoom = 1;
   }
 
-  function lbZoomBy(factor) {
-    const prev = lbScale;
-    const next = Math.min(4.5, Math.max(1, lbScale * factor));
-    if (next === prev) return;
-    lbScale = next;
-    if (lbScale <= 1.02) {
-      lbScale = 1;
-      lbTx = 0;
-      lbTy = 0;
-    } else {
-      lbClampPan();
-    }
-    lbApplyTransform();
-  }
-
-  function lbSyncIndexFromScroll() {
-    const track = $('#lightboxTrack');
-    if (!track || lbScale > 1.02) return;
-    const w = track.clientWidth || 1;
-    const idx = Math.round(track.scrollLeft / w);
-    if (idx !== lightboxIndex && idx >= 0 && idx < lightboxIds.length) {
-      lightboxIndex = idx;
-      lbResetZoom();
-      lbUpdateCount();
-    }
+  function lbGo(delta) {
+    if (!lightboxIds.length) return;
+    lightboxIndex = (lightboxIndex + delta + lightboxIds.length) % lightboxIds.length;
+    lbShowCurrent();
   }
 
   $('#refGrid').addEventListener('click', async (ev) => {
@@ -1617,28 +1549,11 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
   });
 
   $('#lightboxClose').addEventListener('click', closeLightbox);
-  $('#lightboxPrev').addEventListener('click', () => {
-    if (lightboxIndex <= 0) return;
-    lbResetZoom();
-    lightboxIndex -= 1;
-    lbUpdateCount();
-    lbScrollToIndex(lightboxIndex, true);
-  });
-  $('#lightboxNext').addEventListener('click', () => {
-    if (lightboxIndex >= lightboxIds.length - 1) return;
-    lbResetZoom();
-    lightboxIndex += 1;
-    lbUpdateCount();
-    lbScrollToIndex(lightboxIndex, true);
-  });
-  $('#lightboxZoomIn').addEventListener('click', () => lbZoomBy(1.4));
-  $('#lightboxZoomOut').addEventListener('click', () => lbZoomBy(1 / 1.4));
-  $('#lightboxZoomReset').addEventListener('click', () => lbResetZoom());
-
-  $('#lightboxTrack').addEventListener('scroll', () => {
-    window.clearTimeout(lbSyncIndexFromScroll._t);
-    lbSyncIndexFromScroll._t = window.setTimeout(lbSyncIndexFromScroll, 60);
-  }, { passive: true });
+  $('#lightboxPrev').addEventListener('click', () => lbGo(-1));
+  $('#lightboxNext').addEventListener('click', () => lbGo(1));
+  $('#lightboxZoomIn').addEventListener('click', () => lbSetZoom(lbZoom + 0.5));
+  $('#lightboxZoomOut').addEventListener('click', () => lbSetZoom(lbZoom - 0.5));
+  $('#lightboxZoomReset').addEventListener('click', () => lbSetZoom(1));
 
   $('#lightboxDelete').addEventListener('click', () => {
     if (!lightboxId) return;
@@ -1646,129 +1561,56 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     const idx = lightboxIndex;
     askConfirm('Delete photo?', 'Remove this reference photo?', async () => {
       await refDelete(id);
-      renderRef();
+      await renderRef();
       const photos = await refAll();
       if (!photos.length) {
         closeLightbox();
         toast('Photo deleted');
         return;
       }
-      await openLightboxAt(photos[Math.min(idx, photos.length - 1)].id);
+      lightboxIds = photos.map((p) => p.id);
+      lbPhotoMap = {};
+      photos.forEach((p) => { lbPhotoMap[p.id] = p.dataUrl; });
+      lightboxIndex = Math.min(idx, photos.length - 1);
+      lbShowCurrent();
       toast('Photo deleted');
     });
   });
 
-  // Touch: pinch zoom + pan when zoomed (native horizontal scroll handles swipe when not zoomed)
+  // Swipe left/right between photos when not zoomed (no preventDefault — keeps scroll working when zoomed)
   const stage = $('#lightboxStage');
-
-  function lbTouchesList(touchList) {
-    return [...touchList].map((t) => ({ id: t.identifier, x: t.clientX, y: t.clientY }));
-  }
-
   stage.addEventListener('touchstart', (ev) => {
-    if (!$('#lightbox').classList.contains('show')) return;
-    if (ev.target.closest('.lightbox-top, .lightbox-actions')) return;
-    lbTouchCache = lbTouchesList(ev.touches);
-    if (ev.touches.length === 2) {
-      ev.preventDefault();
-      const a = ev.touches[0];
-      const b = ev.touches[1];
-      lbTouchMode = {
-        type: 'pinch',
-        dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1,
-        scale: lbScale,
-        tx: lbTx,
-        ty: lbTy
-      };
-    } else if (ev.touches.length === 1 && lbScale > 1.02) {
-      ev.preventDefault();
-      lbTouchMode = {
-        type: 'pan',
-        x: ev.touches[0].clientX,
-        y: ev.touches[0].clientY,
-        tx: lbTx,
-        ty: lbTy
-      };
-    } else {
-      lbTouchMode = { type: 'tap', x: ev.touches[0].clientX, y: ev.touches[0].clientY, t: Date.now() };
-    }
-  }, { passive: false });
-
-  stage.addEventListener('touchmove', (ev) => {
-    if (!lbTouchMode) return;
-    if (lbTouchMode.type === 'pinch' && ev.touches.length >= 2) {
-      ev.preventDefault();
-      const a = ev.touches[0];
-      const b = ev.touches[1];
-      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1;
-      lbScale = Math.min(4.5, Math.max(1, lbTouchMode.scale * (dist / lbTouchMode.dist)));
-      if (lbScale <= 1.02) {
-        lbScale = 1;
-        lbTx = 0;
-        lbTy = 0;
-      } else {
-        lbTx = lbTouchMode.tx;
-        lbTy = lbTouchMode.ty;
-        lbClampPan();
-      }
-      lbApplyTransform();
-    } else if (lbTouchMode.type === 'pan' && ev.touches.length === 1) {
-      ev.preventDefault();
-      const t = ev.touches[0];
-      lbTx = lbTouchMode.tx + (t.clientX - lbTouchMode.x);
-      lbTy = lbTouchMode.ty + (t.clientY - lbTouchMode.y);
-      lbClampPan();
-      lbApplyTransform();
-    }
-  }, { passive: false });
+    if (ev.touches.length !== 1) return;
+    lbSwipeX = ev.touches[0].clientX;
+    lbSwipeY = ev.touches[0].clientY;
+    lbSwipeT = Date.now();
+  }, { passive: true });
 
   stage.addEventListener('touchend', (ev) => {
-    if (lbTouchMode && lbTouchMode.type === 'tap' && ev.touches.length === 0) {
-      const dt = Date.now() - lbTouchMode.t;
-      const now = Date.now();
-      if (dt < 250) {
-        if (now - lbLastTap < 300) {
-          if (lbScale > 1.02) lbResetZoom();
-          else {
-            lbScale = 2.4;
-            lbTx = 0;
-            lbTy = 0;
-            lbApplyTransform();
-          }
-          lbLastTap = 0;
-        } else {
-          lbLastTap = now;
-        }
-      }
+    if (lbSwipeX == null || lbZoom > 1.05) {
+      lbSwipeX = null;
+      return;
     }
-    if (ev.touches.length === 0) {
-      lbTouchMode = null;
-    } else if (ev.touches.length === 1 && lbScale > 1.02) {
-      lbTouchMode = {
-        type: 'pan',
-        x: ev.touches[0].clientX,
-        y: ev.touches[0].clientY,
-        tx: lbTx,
-        ty: lbTy
-      };
-    }
-  });
-
-  // Mouse wheel zoom (desktop)
-  stage.addEventListener('wheel', (ev) => {
-    if (!$('#lightbox').classList.contains('show')) return;
-    ev.preventDefault();
-    lbZoomBy(ev.deltaY < 0 ? 1.15 : 1 / 1.15);
-  }, { passive: false });
+    const t = ev.changedTouches[0];
+    const dx = t.clientX - lbSwipeX;
+    const dy = t.clientY - lbSwipeY;
+    const dt = Date.now() - lbSwipeT;
+    lbSwipeX = null;
+    if (dt > 600) return;
+    if (Math.abs(dx) < 50) return;
+    if (Math.abs(dx) < Math.abs(dy) * 1.15) return;
+    if (dx < 0) lbGo(1);
+    else lbGo(-1);
+  }, { passive: true });
 
   document.addEventListener('keydown', (ev) => {
     if (!$('#lightbox').classList.contains('show')) return;
     if (ev.key === 'Escape') closeLightbox();
-    if (ev.key === 'ArrowLeft') $('#lightboxPrev').click();
-    if (ev.key === 'ArrowRight') $('#lightboxNext').click();
-    if (ev.key === '+' || ev.key === '=') lbZoomBy(1.35);
-    if (ev.key === '-') lbZoomBy(1 / 1.35);
-    if (ev.key === '0') lbResetZoom();
+    if (ev.key === 'ArrowLeft') lbGo(-1);
+    if (ev.key === 'ArrowRight') lbGo(1);
+    if (ev.key === '+' || ev.key === '=') lbSetZoom(lbZoom + 0.5);
+    if (ev.key === '-') lbSetZoom(lbZoom - 0.5);
+    if (ev.key === '0') lbSetZoom(1);
   });
 
   // ---------- backup / restore ----------
@@ -1836,7 +1678,7 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
   // ---------- PWA ----------
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js').catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=5').catch(() => {});
     });
   }
 

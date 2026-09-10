@@ -1,4 +1,4 @@
-const CACHE = 'worklog-v5-pages3';
+const CACHE = 'worklog-v5-pages4';
 const FILES = [
   './',
   './index.html',
@@ -22,17 +22,29 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(e.request)
+  const req = e.request;
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isHTML) {
+    e.respondWith(
+      fetch(req)
         .then((res) => {
-          if (!res || res.status !== 200 || res.type === 'opaque') return res;
           const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(e.request, copy));
+          caches.open(CACHE).then((cache) => cache.put(req, copy));
           return res;
         })
-        .catch(() => caches.match('./index.html'));
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+  e.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((res) => {
+        if (!res || res.status !== 200 || res.type === 'opaque') return res;
+        const copy = res.clone();
+        caches.open(CACHE).then((cache) => cache.put(req, copy));
+        return res;
+      }).catch(() => cached);
     })
   );
 });
