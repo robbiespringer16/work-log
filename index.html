@@ -574,13 +574,18 @@
     .lightbox-scroll img {
       display: block;
       margin: 0 auto;
-      width: 100%;
+      width: auto;
       height: auto;
-      max-width: none;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
       user-select: none;
       -webkit-user-select: none;
       -webkit-user-drag: none;
-      image-rendering: -webkit-optimize-contrast;
+    }
+    .lightbox-scroll.zoomed img {
+      max-width: none;
+      max-height: none;
     }
     .lightbox-actions {
       display: flex;
@@ -968,18 +973,17 @@
     }
   }
 
-  function compressImage(file, maxEdge = 2048, quality = 0.9) {
+  function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
-      const name = (file.name || '').toLowerCase();
-      const type = (file.type || '').toLowerCase();
-      if (name.endsWith('.heic') || name.endsWith('.heif') || type.includes('heic') || type.includes('heif')) {
-        reject(new Error('HEIC not supported — use JPEG or PNG'));
-        return;
-      }
-      if (!type.startsWith('image/') && type !== '') {
-        reject(new Error('Not an image file'));
-        return;
-      }
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error('Could not read image'));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function compressImage(file, maxEdge = 3200, quality = 0.92) {
+    return new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
@@ -992,6 +996,8 @@
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, 0, 0, width, height);
           const dataUrl = canvas.toDataURL('image/jpeg', quality);
           URL.revokeObjectURL(url);
@@ -1007,6 +1013,24 @@
       };
       img.src = url;
     });
+  }
+
+  // Prefer original bytes so photos match the camera roll. Only shrink huge files.
+  async function preparePhoto(file) {
+    const name = (file.name || '').toLowerCase();
+    const type = (file.type || '').toLowerCase();
+    if (name.endsWith('.heic') || name.endsWith('.heif') || type.includes('heic') || type.includes('heif')) {
+      throw new Error('HEIC not supported — choose JPEG or PNG (Most Compatible)');
+    }
+    if (type && !type.startsWith('image/')) {
+      throw new Error('Not an image file');
+    }
+    const MAX_KEEP = 5.5 * 1024 * 1024; // ~5.5MB keep as-is
+    if (file.size && file.size <= MAX_KEEP && (type === 'image/jpeg' || type === 'image/png' || type === 'image/webp' || type === 'image/jpg' || type === '')) {
+      return readFileAsDataURL(file);
+    }
+    // Large / unknown: gentle downscale only
+    return compressImage(file, 3200, 0.92);
   }
 
   // ---------- sort / filter ----------
@@ -1462,7 +1486,7 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     let ok = 0;
     for (const f of files) {
       try {
-        const dataUrl = await compressImage(f);
+        const dataUrl = await preparePhoto(f);
         await refPut({ id: uid(), dataUrl, createdAt: Date.now() });
         ok++;
       } catch (err) {
@@ -1487,10 +1511,18 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
     const img = $('#lightboxImg');
     const scroll = $('#lightboxScroll');
     if (!img || !scroll) return;
-    img.style.width = (lbZoom * 100) + '%';
-    if (lbZoom <= 1) {
+    if (lbZoom <= 1.01) {
+      scroll.classList.remove('zoomed');
+      img.style.width = '';
+      img.style.maxWidth = '100%';
+      img.style.maxHeight = '100%';
       scroll.scrollLeft = 0;
       scroll.scrollTop = 0;
+    } else {
+      scroll.classList.add('zoomed');
+      img.style.maxWidth = 'none';
+      img.style.maxHeight = 'none';
+      img.style.width = (lbZoom * 100) + '%';
     }
   }
 
@@ -1679,7 +1711,7 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
   // ---------- PWA ----------
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=6').catch(() => {});
+      navigator.serviceWorker.register('./sw.js?v=7').catch(() => {});
     });
   }
 
