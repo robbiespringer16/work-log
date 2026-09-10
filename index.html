@@ -1,0 +1,1518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Work Log" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet" />
+  <title>Work Log</title>
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --surface: #ffffff;
+      --surface-2: #f0f0f3;
+      --elevated: #ffffff;
+      --border: rgba(0,0,0,0.06);
+      --border-strong: rgba(0,0,0,0.10);
+      --text: #111827;
+      --text-secondary: #6b7280;
+      --muted: #9ca3af;
+      --accent: #2563eb;
+      --accent-soft: rgba(37, 99, 235, 0.10);
+      --accent-ink: #ffffff;
+      --parts: #0284c7;
+      --parts-soft: rgba(2, 132, 199, 0.10);
+      --parts-ink: #0c4a6e;
+      --danger: #dc2626;
+      --danger-soft: rgba(220, 38, 38, 0.08);
+      --overdue: #c2410c;
+      --overdue-soft: rgba(194, 65, 12, 0.10);
+      --overdue-ink: #7c2d12;
+      --ok: #059669;
+      --ok-soft: rgba(5, 150, 105, 0.10);
+      --radius: 16px;
+      --radius-sm: 12px;
+      --radius-pill: 999px;
+      --max: 480px;
+      --safe-b: env(safe-area-inset-bottom, 0px);
+      --safe-t: env(safe-area-inset-top, 0px);
+      --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.06);
+      --font: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 16px;
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+      -webkit-tap-highlight-color: transparent;
+    }
+    body { display: flex; justify-content: center; }
+    button, input, textarea { font-family: inherit; }
+    #app {
+      width: 100%;
+      max-width: var(--max);
+      min-height: 100%;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+    }
+
+    /* Header */
+    header.app-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(245, 245, 247, 0.86);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      padding: calc(18px + var(--safe-t)) 20px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+    header h1 span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .menu-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-sm);
+      font-size: 1.25rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .menu-btn:active { background: var(--surface-2); }
+
+    /* Segmented tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 14px;
+      background: var(--surface-2);
+      border-radius: 14px;
+      border: 1px solid var(--border);
+    }
+    .tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 550;
+      padding: 11px 8px;
+      min-height: 44px;
+      cursor: pointer;
+      border-radius: 11px;
+      transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    }
+    .tab.active {
+      color: var(--text);
+      background: var(--surface);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 1px rgba(0,0,0,0.04);
+    }
+    .tab .count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 1.35em;
+      height: 1.35em;
+      padding: 0 6px;
+      margin-left: 5px;
+      font-size: 0.7rem;
+      font-weight: 650;
+      border-radius: var(--radius-pill);
+      background: rgba(0,0,0,0.06);
+      color: inherit;
+      opacity: 0.9;
+      vertical-align: middle;
+    }
+    .tab.active .count {
+      background: var(--accent-soft);
+      color: var(--accent);
+      opacity: 1;
+    }
+
+    main {
+      flex: 1;
+      padding: 20px 20px calc(100px + var(--safe-b));
+      overflow-y: auto;
+    }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .search-row { margin-bottom: 18px; }
+    .search-row input {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 14px 16px;
+      font-size: 1rem;
+      outline: none;
+      min-height: 48px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .search-row input:focus { border-color: rgba(37, 99, 235, 0.45); background: var(--surface); }
+    .search-row input::placeholder { color: var(--muted); }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 13px 16px;
+      min-height: 48px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--surface-2);
+      color: var(--text);
+      letter-spacing: -0.01em;
+      border: 1px solid transparent;
+    }
+    .btn:active { opacity: 0.9; transform: scale(0.99); }
+    .btn-gold {
+      background: var(--accent);
+      color: var(--accent-ink);
+      border-color: var(--accent);
+    }
+    .btn-ghost {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      color: var(--text);
+    }
+    .btn-danger {
+      background: var(--danger-soft);
+      color: var(--danger);
+      border: 1px solid rgba(220, 38, 38, 0.18);
+    }
+    .btn-parts {
+      background: var(--parts-soft);
+      color: var(--parts);
+      border: 1px solid rgba(2, 132, 199, 0.18);
+    }
+    .btn-block { width: 100%; }
+    .btn-sm { padding: 11px 14px; min-height: 44px; font-size: 0.88rem; }
+    .btn-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .btn-row .btn { flex: 1 1 auto; min-width: 120px; }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 56px 24px;
+      font-size: 0.98rem;
+      line-height: 1.55;
+    }
+    .empty strong {
+      display: block;
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 1.05rem;
+      margin-bottom: 8px;
+    }
+
+    /* Cards — soft, airy */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 18px 16px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      box-shadow: var(--shadow);
+    }
+    .card:active { background: var(--surface-2); }
+    .card.today {
+      border-color: rgba(37, 99, 235, 0.28);
+      background: linear-gradient(160deg, var(--accent-soft), var(--surface) 55%);
+    }
+    .card.overdue {
+      border-color: rgba(194, 65, 12, 0.28);
+      background: linear-gradient(160deg, var(--overdue-soft), var(--surface) 55%);
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .card-loc {
+      font-weight: 600;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+    .card-task {
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      flex-shrink: 0;
+      justify-content: flex-end;
+    }
+    .badge {
+      font-size: 0.68rem;
+      font-weight: 650;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      padding: 5px 10px;
+      border-radius: var(--radius-pill);
+      white-space: nowrap;
+      line-height: 1.2;
+    }
+    .badge-today {
+      background: var(--accent-soft);
+      color: var(--accent);
+      border: 1px solid rgba(37, 99, 235, 0.18);
+    }
+    .badge-overdue {
+      background: var(--overdue-soft);
+      color: var(--overdue);
+      border: 1px solid rgba(194, 65, 12, 0.18);
+    }
+    .badge-parts {
+      background: var(--parts-soft);
+      color: var(--parts);
+      border: 1px solid rgba(2, 132, 199, 0.18);
+    }
+    .badge-done {
+      background: var(--ok-soft);
+      color: var(--ok);
+      border: 1px solid rgba(5, 150, 105, 0.18);
+    }
+    .card-meta {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      font-size: 0.8rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    /* FAB */
+    .fab {
+      position: fixed;
+      bottom: calc(22px + var(--safe-b));
+      left: 50%;
+      transform: translateX(-50%);
+      width: min(calc(100% - 40px), calc(var(--max) - 40px));
+      z-index: 50;
+      display: none;
+    }
+    .fab.show { display: block; }
+    .fab .btn {
+      width: 100%;
+      padding: 16px;
+      font-size: 1.02rem;
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(37, 99, 235, 0.35), 0 2px 6px rgba(0,0,0,0.08);
+    }
+
+    /* Sheets */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.40);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 80;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .overlay.show { display: flex; }
+    .sheet {
+      width: 100%;
+      max-width: var(--max);
+      max-height: min(92vh, 740px);
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      padding: 10px 20px calc(24px + var(--safe-b));
+      overflow-y: auto;
+      border: 1px solid var(--border-strong);
+      border-bottom: none;
+      box-shadow: var(--shadow);
+    }
+    .sheet::before {
+      content: "";
+      display: block;
+      width: 36px;
+      height: 4px;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.14);
+      margin: 6px auto 14px;
+    }
+    .sheet-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .sheet-title .close-x {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    label.field { display: block; margin-bottom: 16px; }
+    label.field span {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-bottom: 7px;
+      font-weight: 550;
+      letter-spacing: 0.01em;
+    }
+    label.field input,
+    label.field textarea {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 13px 14px;
+      font-size: 1rem;
+      outline: none;
+      resize: vertical;
+      min-height: 48px;
+    }
+    label.field input:focus,
+    label.field textarea:focus {
+      border-color: rgba(37, 99, 235, 0.45);
+      background: var(--surface);
+    }
+    label.field textarea { min-height: 96px; line-height: 1.45; }
+    .check-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 2px 0 18px;
+      font-size: 0.95rem;
+      color: var(--text);
+      min-height: 44px;
+    }
+    .check-row input {
+      width: 20px;
+      height: 20px;
+      accent-color: var(--parts);
+    }
+
+    .detail-block { margin-bottom: 18px; }
+    .detail-block .lbl {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+    .detail-block .val {
+      font-size: 1.02rem;
+      word-break: break-word;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      color: var(--text);
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(100px + var(--safe-b));
+      transform: translateX(-50%) translateY(12px);
+      background: var(--elevated);
+      color: var(--text);
+      border: 1px solid var(--border-strong);
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      max-width: min(88vw, 360px);
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast.err {
+      border-color: rgba(220, 38, 38, 0.28);
+      color: var(--danger);
+      background: #fff5f5;
+    }
+
+    .ref-toolbar { margin-bottom: 16px; }
+    .ref-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    .ref-item {
+      aspect-ratio: 1;
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      cursor: pointer;
+    }
+    .ref-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .lightbox {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.94);
+      z-index: 90;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .lightbox.show { display: flex; }
+    .lightbox img {
+      max-width: 100%;
+      max-height: calc(100% - 80px);
+      object-fit: contain;
+      border-radius: 12px;
+      touch-action: none;
+    }
+    .lightbox-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+      width: 100%;
+      max-width: var(--max);
+    }
+    .lightbox-actions .btn { flex: 1; }
+
+    .data-box {
+      margin-top: 28px;
+      padding: 18px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+    .data-box h3 {
+      font-size: 0.75rem;
+      color: var(--muted);
+      font-weight: 650;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .data-box p.hint {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-top: 12px;
+      line-height: 1.45;
+    }
+    .hidden-file { display: none; }
+  
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.06);
+    }
+    .card-actions .btn {
+      flex: 1;
+      min-width: 88px;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+</style>
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <div class="header-row">
+        <h1>Work <span>Log</span></h1>
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" title="Data">⋯</button>
+      </div>
+      <nav class="tabs" role="tablist">
+        <button type="button" class="tab active" data-tab="open">Open <span class="count" id="openCount">0</span></button>
+        <button type="button" class="tab" data-tab="done">Done <span class="count" id="doneCount">0</span></button>
+        <button type="button" class="tab" data-tab="ref">Reference</button>
+      </nav>
+    </header>
+
+    <main>
+      <section id="panel-open" class="panel active">
+        <div class="search-row">
+          <input type="search" id="openSearch" placeholder="Search location, task…" autocomplete="off" />
+        </div>
+        <div id="openList"></div>
+      </section>
+
+      <section id="panel-done" class="panel">
+        <div class="search-row">
+          <input type="search" id="doneSearch" placeholder="Search completed…" autocomplete="off" />
+        </div>
+        <div id="doneList"></div>
+        <div class="data-box">
+          <h3>Data</h3>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost btn-sm" id="backupBtn">Backup JSON</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="restoreBtn">Restore…</button>
+          </div>
+          <p class="hint">Backup includes jobs and reference photos. Restore overwrites current data.</p>
+          <input type="file" id="restoreFile" class="hidden-file" accept="application/json,.json" />
+        </div>
+      </section>
+
+      <section id="panel-ref" class="panel">
+        <div class="ref-toolbar">
+          <button type="button" class="btn btn-gold btn-block" id="addPhotoBtn">+ Add photo</button>
+        </div>
+        <input type="file" id="photoFile" class="hidden-file" accept="image/*" multiple />
+        <div id="refGrid" class="ref-grid"></div>
+        <div id="refEmpty" class="empty" style="display:none"><strong>Reference album</strong>Building codes and notes photos live here.</div>
+      </section>
+    </main>
+
+    <div class="fab" id="fab">
+      <button type="button" class="btn btn-gold" id="newJobBtn">+ New job</button>
+    </div>
+  </div>
+
+  <!-- New / Edit job sheet -->
+  <div class="overlay" id="jobOverlay">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-title">
+        <span id="jobSheetTitle">New job</span>
+        <button type="button" class="close-x" data-close="jobOverlay">×</button>
+      </div>
+      <form id="jobForm">
+        <input type="hidden" id="jobId" />
+        <label class="field">
+          <span>Location *</span>
+          <input type="text" id="jobLocation" required placeholder="Address or place" autocomplete="street-address" />
+        </label>
+        <label class="field">
+          <span>Job details *</span>
+          <textarea id="jobTask" required placeholder="What needs doing / notes"></textarea>
+        </label>
+        <label class="field">
+          <span>Due date (defaults to today)</span>
+          <input type="date" id="jobDue" />
+        </label>
+        <label class="check-row" id="partsCheckWrap">
+          <input type="checkbox" id="jobParts" />
+          Waiting on parts
+        </label>
+        <button type="submit" class="btn btn-gold btn-block" id="jobSaveBtn">Save</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Detail sheet -->
+  <div class="overlay" id="detailOverlay">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-title">
+        <span>Job</span>
+        <button type="button" class="close-x" data-close="detailOverlay">×</button>
+      </div>
+      <div id="detailBody"></div>
+      <div class="btn-row" id="detailActions"></div>
+    </div>
+  </div>
+
+  <!-- Confirm sheet -->
+  <div class="overlay" id="confirmOverlay">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-title">
+        <span id="confirmTitle">Confirm</span>
+        <button type="button" class="close-x" data-close="confirmOverlay">×</button>
+      </div>
+      <p id="confirmMsg" style="color:var(--muted);margin-bottom:16px;"></p>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" data-close="confirmOverlay">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmOk">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data menu (from ⋯) -->
+  <div class="overlay" id="menuOverlay">
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-title">
+        <span>Data</span>
+        <button type="button" class="close-x" data-close="menuOverlay">×</button>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="btn btn-ghost" id="menuBackup">Backup JSON</button>
+        <button type="button" class="btn btn-ghost" id="menuRestore">Restore…</button>
+      </div>
+      <p style="color:var(--muted);font-size:0.82rem;margin-top:12px;">Backup includes jobs and reference photos. Restore overwrites current data.</p>
+    </div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox">
+    <img id="lightboxImg" alt="Reference" />
+    <div class="lightbox-actions">
+      <button type="button" class="btn btn-ghost" id="lightboxClose">Close</button>
+      <button type="button" class="btn btn-danger" id="lightboxDelete">Delete</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'worklog_v5';
+  const REF_DB = 'worklog_ref_v5';
+  const REF_STORE = 'photos';
+  const LEGACY_REF = 'handyman_ref_v1';
+
+  // ---------- helpers ----------
+  const $ = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function todayStr() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = iso.slice(0, 10);
+    const [y, m, day] = d.split('-');
+    return `${m}/${day}/${y}`;
+  }
+
+  function toast(msg, isErr) {
+    const t = $('#toast');
+    t.textContent = msg;
+    t.classList.toggle('err', !!isErr);
+    t.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  function openOverlay(id) {
+    $('#' + id).classList.add('show');
+  }
+  function closeOverlay(id) {
+    $('#' + id).classList.remove('show');
+  }
+
+  $$('[data-close]').forEach((btn) => {
+    btn.addEventListener('click', () => closeOverlay(btn.getAttribute('data-close')));
+  });
+
+  // ---------- storage: jobs ----------
+  function loadStore() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return { entries: [] };
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.entries)) return { entries: [] };
+      return { entries: data.entries };
+    } catch {
+      return { entries: [] };
+    }
+  }
+
+  function saveStore(store) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ entries: store.entries }));
+  }
+
+  let store = loadStore();
+
+  function getEntry(id) {
+    return store.entries.find((e) => e.id === id);
+  }
+
+  function upsertEntry(entry) {
+    const i = store.entries.findIndex((e) => e.id === entry.id);
+    if (i >= 0) store.entries[i] = entry;
+    else store.entries.unshift(entry);
+    saveStore(store);
+  }
+
+  function removeEntry(id) {
+    store.entries = store.entries.filter((e) => e.id !== id);
+    saveStore(store);
+  }
+
+  // ---------- IndexedDB reference photos ----------
+  let dbPromise = null;
+
+  function openRefDb() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise((resolve, reject) => {
+      const req = indexedDB.open(REF_DB, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(REF_STORE)) {
+          db.createObjectStore(REF_STORE, { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+    return dbPromise;
+  }
+
+  async function refAll() {
+    const db = await openRefDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(REF_STORE, 'readonly');
+      const req = tx.objectStore(REF_STORE).getAll();
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        rows.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        resolve(rows);
+      };
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function refPut(photo) {
+    const db = await openRefDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(REF_STORE, 'readwrite');
+      tx.objectStore(REF_STORE).put(photo);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function refDelete(id) {
+    const db = await openRefDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(REF_STORE, 'readwrite');
+      tx.objectStore(REF_STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function refClear() {
+    const db = await openRefDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(REF_STORE, 'readwrite');
+      tx.objectStore(REF_STORE).clear();
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function migrateLegacyRef() {
+    try {
+      const raw = localStorage.getItem(LEGACY_REF);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      const list = Array.isArray(data) ? data : (data && data.photos) || [];
+      if (!list.length) {
+        localStorage.removeItem(LEGACY_REF);
+        return;
+      }
+      const existing = await refAll();
+      if (existing.length) {
+        localStorage.removeItem(LEGACY_REF);
+        return;
+      }
+      for (const p of list) {
+        const blobOrData = p.blob || p.dataUrl || p.data;
+        if (!blobOrData) continue;
+        let dataUrl = blobOrData;
+        if (typeof blobOrData !== 'string') continue;
+        await refPut({
+          id: p.id || uid(),
+          dataUrl,
+          createdAt: p.createdAt || Date.now()
+        });
+      }
+      localStorage.removeItem(LEGACY_REF);
+      toast('Migrated old reference photos');
+    } catch (err) {
+      console.warn('legacy ref migrate', err);
+    }
+  }
+
+  function compressImage(file, maxEdge = 900, quality = 0.72) {
+    return new Promise((resolve, reject) => {
+      const name = (file.name || '').toLowerCase();
+      const type = (file.type || '').toLowerCase();
+      if (name.endsWith('.heic') || name.endsWith('.heif') || type.includes('heic') || type.includes('heif')) {
+        reject(new Error('HEIC not supported — use JPEG or PNG'));
+        return;
+      }
+      if (!type.startsWith('image/') && type !== '') {
+        reject(new Error('Not an image file'));
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let { width, height } = img;
+          const scale = Math.min(1, maxEdge / Math.max(width, height));
+          width = Math.round(width * scale);
+          height = Math.round(height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          URL.revokeObjectURL(url);
+          resolve(dataUrl);
+        } catch (e) {
+          URL.revokeObjectURL(url);
+          reject(e);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Could not read image'));
+      };
+      img.src = url;
+    });
+  }
+
+  // ---------- sort / filter ----------
+  function dueKind(due) {
+    if (!due) return 'none';
+    const t = todayStr();
+    if (due === t) return 'today';
+    if (due < t) return 'overdue';
+    return 'later';
+  }
+
+  function openSort(a, b) {
+    const rank = { today: 0, overdue: 1, none: 2, later: 2 };
+    const ka = dueKind(a.due);
+    const kb = dueKind(b.due);
+    const ra = rank[ka];
+    const rb = rank[kb];
+    if (ra !== rb) return ra - rb;
+    if (ka === 'overdue' || ka === 'later') {
+      if (a.due && b.due && a.due !== b.due) return a.due.localeCompare(b.due);
+    }
+    return (b.updatedAt || b.createdAt || '').localeCompare(a.updatedAt || a.createdAt || '');
+  }
+
+  function matchesQuery(e, q) {
+    if (!q) return true;
+    const hay = [e.location, e.task, e.performed].join(' ').toLowerCase();
+    return hay.includes(q);
+  }
+
+  // ---------- render ----------
+  let currentTab = 'open';
+  let lightboxId = null;
+  let confirmAction = null;
+
+  function setTab(name) {
+    currentTab = name;
+    $$('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
+    $$('.panel').forEach((p) => p.classList.toggle('active', p.id === 'panel-' + name));
+    $('#fab').classList.toggle('show', name === 'open');
+    if (name === 'ref') renderRef();
+  }
+
+  function renderCounts() {
+    const openN = store.entries.filter((e) => e.status === 'open' || e.status === 'parts').length;
+    const doneN = store.entries.filter((e) => e.status === 'done').length;
+    $('#openCount').textContent = openN;
+    $('#doneCount').textContent = doneN;
+  }
+
+  function cardHtml(e, mode) {
+    const kind = dueKind(e.due);
+    let cls = 'card';
+    if (mode === 'open') {
+      if (kind === 'today') cls += ' today';
+      else if (kind === 'overdue') cls += ' overdue';
+    }
+    const badges = [];
+    if (mode === 'open') {
+      if (kind === 'today') badges.push('<span class="badge badge-today">Today</span>');
+      else if (kind === 'overdue') badges.push('<span class="badge badge-overdue">Overdue</span>');
+      if (e.status === 'parts') badges.push('<span class="badge badge-parts">Parts</span>');
+    } else {
+      badges.push('<span class="badge badge-done">Done</span>');
+    }
+    const subtitle = mode === 'done'
+      ? (e.task || e.performed || '')
+      : (e.task || '');
+    let meta = '';
+    if (mode === 'open' && e.due) meta = 'Due ' + fmtDate(e.due);
+    if (mode === 'done') meta = e.completedAt ? ('Completed ' + fmtDate(e.completedAt)) : '';
+    let actions = '';
+    if (mode === 'open') {
+      actions = `<div class="card-actions" data-stop="1">
+        <button type="button" class="btn btn-gold" data-card-act="done" data-id="${e.id}">Complete</button>
+        <button type="button" class="btn btn-ghost" data-card-act="edit" data-id="${e.id}">Edit</button>
+        <button type="button" class="btn btn-danger" data-card-act="delete" data-id="${e.id}">Delete</button>
+      </div>`;
+    } else {
+      actions = `<div class="card-actions" data-stop="1">
+        <button type="button" class="btn btn-ghost" data-card-act="edit" data-id="${e.id}">Edit</button>
+        <button type="button" class="btn btn-ghost" data-card-act="reopen" data-id="${e.id}">Reopen</button>
+        <button type="button" class="btn btn-danger" data-card-act="delete" data-id="${e.id}">Delete</button>
+      </div>`;
+    }
+    return `
+      <article class="${cls}" data-id="${e.id}" role="button" tabindex="0">
+        <div class="card-top">
+          <div class="card-loc">${esc(e.location || '—')}</div>
+          <div class="badges">${badges.join('')}</div>
+        </div>
+        <div class="card-task">${esc(subtitle)}</div>
+        ${meta ? `<div class="card-meta">${esc(meta)}</div>` : ''}
+        ${actions}
+      </article>`;
+  }
+
+  function esc(s) {
+    return String(s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderOpen() {
+    const q = ($('#openSearch').value || '').trim().toLowerCase();
+    const list = store.entries
+      .filter((e) => e.status === 'open' || e.status === 'parts')
+      .filter((e) => matchesQuery(e, q))
+      .sort(openSort);
+    const el = $('#openList');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty"><strong>Nothing open</strong>Tap + New job when work comes in.</div>';
+    } else {
+      el.innerHTML = list.map((e) => cardHtml(e, 'open')).join('');
+    }
+    renderCounts();
+  }
+
+  function renderDone() {
+    const q = ($('#doneSearch').value || '').trim().toLowerCase();
+    const list = store.entries
+      .filter((e) => e.status === 'done')
+      .filter((e) => matchesQuery(e, q))
+      .sort((a, b) => (b.completedAt || '').localeCompare(a.completedAt || ''));
+    const el = $('#doneList');
+    if (!list.length) {
+      el.innerHTML = '<div class="empty"><strong>No completed jobs yet</strong>Finished work lands here for Wave later.</div>';
+    } else {
+      el.innerHTML = list.map((e) => cardHtml(e, 'done')).join('');
+    }
+    renderCounts();
+  }
+
+  function renderAll() {
+    renderOpen();
+    renderDone();
+  }
+
+  async function renderRef() {
+    const photos = await refAll();
+    const grid = $('#refGrid');
+    const empty = $('#refEmpty');
+    if (!photos.length) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    grid.innerHTML = photos.map((p) => `
+      <div class="ref-item" data-id="${p.id}">
+        <img src="${p.dataUrl}" alt="Reference" loading="lazy" />
+      </div>`).join('');
+  }
+
+  // ---------- detail ----------
+  function showDetail(id) {
+    const e = getEntry(id);
+    if (!e) return;
+    const kind = dueKind(e.due);
+    let statusLabel = 'To do';
+    if (e.status === 'parts') statusLabel = 'Waiting on parts';
+    if (e.status === 'done') statusLabel = 'Done';
+
+    let badges = '';
+    if (e.status === 'parts') badges += '<span class="badge badge-parts">Parts</span> ';
+    if (kind === 'today' && e.status !== 'done') badges += '<span class="badge badge-today">Today</span> ';
+    if (kind === 'overdue' && e.status !== 'done') badges += '<span class="badge badge-overdue">Overdue</span> ';
+
+    $('#detailBody').innerHTML = `
+      <div style="margin-bottom:10px;">${badges}</div>
+      <div class="detail-block"><div class="lbl">Location</div><div class="val">${esc(e.location)}</div></div>
+      <div class="detail-block"><div class="lbl">Job details</div><div class="val">${esc(e.task || e.performed || '') || '<span style="color:var(--muted)">—</span>'}</div></div>
+      <div class="detail-block"><div class="lbl">Due</div><div class="val">${e.due ? esc(fmtDate(e.due)) : '—'}</div></div>
+      <div class="detail-block"><div class="lbl">Status</div><div class="val">${statusLabel}</div></div>
+      ${e.completedAt ? `<div class="detail-block"><div class="lbl">Completed</div><div class="val">${esc(fmtDate(e.completedAt))}</div></div>` : ''}
+    `;
+
+    const actions = $('#detailActions');
+    actions.innerHTML = '';
+    if (e.status !== 'done') {
+      actions.innerHTML += `<button type="button" class="btn btn-gold" data-act="done" data-id="${e.id}">Mark done</button>`;
+      if (e.status === 'parts') {
+        actions.innerHTML += `<button type="button" class="btn btn-ghost" data-act="clear-parts" data-id="${e.id}">Clear parts</button>`;
+      } else {
+        actions.innerHTML += `<button type="button" class="btn btn-parts" data-act="parts" data-id="${e.id}">Waiting on parts</button>`;
+      }
+      actions.innerHTML += `<button type="button" class="btn btn-ghost" data-act="edit" data-id="${e.id}">Edit</button>`;
+    } else {
+      actions.innerHTML += `<button type="button" class="btn btn-ghost" data-act="copy" data-id="${e.id}">Copy for Wave</button>`;
+      actions.innerHTML += `<button type="button" class="btn btn-ghost" data-act="reopen" data-id="${e.id}">Reopen</button>`;
+      actions.innerHTML += `<button type="button" class="btn btn-ghost" data-act="edit" data-id="${e.id}">Edit</button>`;
+    }
+    actions.innerHTML += `<button type="button" class="btn btn-danger" data-act="delete" data-id="${e.id}">Delete</button>`;
+    openOverlay('detailOverlay');
+  }
+
+  $('#detailActions').addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-act]');
+    if (!btn) return;
+    const id = btn.dataset.id;
+    const act = btn.dataset.act;
+    const e = getEntry(id);
+    if (!e) return;
+
+    if (act === 'edit') {
+      closeOverlay('detailOverlay');
+      openJobForm(e);
+      return;
+    }
+    if (act === 'done') {
+      closeOverlay('detailOverlay');
+      openMarkDone(e);
+      return;
+    }
+    if (act === 'parts') {
+      e.status = 'parts';
+      e.updatedAt = new Date().toISOString();
+      upsertEntry(e);
+      closeOverlay('detailOverlay');
+      renderAll();
+      toast('Marked waiting on parts');
+      return;
+    }
+    if (act === 'clear-parts') {
+      e.status = 'open';
+      e.updatedAt = new Date().toISOString();
+      upsertEntry(e);
+      closeOverlay('detailOverlay');
+      renderAll();
+      toast('Cleared parts flag');
+      return;
+    }
+    if (act === 'reopen') {
+      e.status = 'open';
+      e.completedAt = null;
+      e.updatedAt = new Date().toISOString();
+      upsertEntry(e);
+      closeOverlay('detailOverlay');
+      renderAll();
+      setTab('open');
+      toast('Reopened');
+      return;
+    }
+    if (act === 'copy') {
+      const text = `${e.location}\n${e.performed || e.task || ''}`.trim();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => toast('Copied')).catch(() => fallbackCopy(text));
+      } else {
+        fallbackCopy(text);
+      }
+      return;
+    }
+    if (act === 'delete') {
+      askConfirm('Delete job?', 'This cannot be undone.', () => {
+        removeEntry(id);
+        closeOverlay('detailOverlay');
+        renderAll();
+        toast('Deleted');
+      });
+    }
+  });
+
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      toast('Copied');
+    } catch {
+      toast('Copy failed', true);
+    }
+    ta.remove();
+  }
+
+  function openMarkDone(e) {
+    const now = new Date().toISOString();
+    e.status = 'done';
+    e.completedAt = now;
+    e.updatedAt = now;
+    if (!e.performed) e.performed = e.task || '';
+    upsertEntry(e);
+    closeOverlay('detailOverlay');
+    renderAll();
+    setTab('done');
+    toast('Marked done');
+  }
+
+  function openJobForm(existing) {
+    $('#partsCheckWrap').style.display = '';
+    if (existing) {
+      $('#jobSheetTitle').textContent = 'Edit job';
+      $('#jobId').value = existing.id;
+      $('#jobLocation').value = existing.location || '';
+      $('#jobTask').value = existing.task || '';
+      $('#jobDue').value = existing.due || '';
+      $('#jobParts').checked = existing.status === 'parts';
+      $('#jobSaveBtn').textContent = 'Save';
+      $('#jobForm').dataset.mode = 'edit';
+    } else {
+      $('#jobSheetTitle').textContent = 'New job';
+      $('#jobId').value = '';
+      $('#jobLocation').value = '';
+      $('#jobTask').value = '';
+      $('#jobDue').value = todayStr();
+      $('#jobParts').checked = false;
+      $('#jobSaveBtn').textContent = 'Save';
+      $('#jobForm').dataset.mode = 'new';
+    }
+    openOverlay('jobOverlay');
+    setTimeout(() => $('#jobLocation').focus(), 50);
+  }
+
+  $('#jobForm').addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const mode = $('#jobForm').dataset.mode || 'new';
+    const location = $('#jobLocation').value.trim();
+    const task = $('#jobTask').value.trim();
+    if (!location || !task) {
+      toast('Location and job details required', true);
+      return;
+    }
+    const due = $('#jobDue').value || null;
+    const now = new Date().toISOString();
+
+    if (mode === 'edit') {
+      const id = $('#jobId').value;
+      const e = getEntry(id);
+      if (!e) return;
+      e.location = location;
+      e.task = task;
+      e.performed = task;
+      e.due = due;
+      if (e.status !== 'done') {
+        e.status = $('#jobParts').checked ? 'parts' : 'open';
+      }
+      e.updatedAt = now;
+      upsertEntry(e);
+      closeOverlay('jobOverlay');
+      renderAll();
+      toast('Saved');
+      return;
+    }
+
+    // new
+    const entry = {
+      id: uid(),
+      location,
+      task,
+      performed: task,
+      due,
+      status: $('#jobParts').checked ? 'parts' : 'open',
+      createdAt: now,
+      updatedAt: now,
+      completedAt: null
+    };
+    upsertEntry(entry);
+    closeOverlay('jobOverlay');
+    renderAll();
+    setTab('open');
+    toast('Job logged');
+  });
+
+  function askConfirm(title, msg, onOk) {
+    $('#confirmTitle').textContent = title;
+    $('#confirmMsg').textContent = msg;
+    $('#confirmOk').textContent = title.toLowerCase().includes('restore') ? 'Overwrite' : 'Delete';
+    confirmAction = onOk;
+    openOverlay('confirmOverlay');
+  }
+
+  $('#confirmOk').addEventListener('click', () => {
+    const fn = confirmAction;
+    confirmAction = null;
+    closeOverlay('confirmOverlay');
+    if (fn) fn();
+  });
+
+  // ---------- list clicks ----------
+  function bindList(listId) {
+    $(listId).addEventListener('click', (ev) => {
+      const card = ev.target.closest('[data-id]');
+      if (card) showDetail(card.dataset.id);
+    });
+  }
+  bindList('#openList');
+  bindList('#doneList');
+
+  $('#openSearch').addEventListener('input', renderOpen);
+  $('#doneSearch').addEventListener('input', renderDone);
+
+  $$('.tab').forEach((t) => t.addEventListener('click', () => setTab(t.dataset.tab)));
+  
+  function handleCardAct(act, id) {
+    const e = getEntry(id);
+    if (!e) return;
+    if (act === 'edit') {
+      openJobForm(e);
+      return;
+    }
+    if (act === 'done') {
+      openMarkDone(e);
+      return;
+    }
+    if (act === 'reopen') {
+      e.status = 'open';
+      e.completedAt = null;
+      e.updatedAt = new Date().toISOString();
+      upsertEntry(e);
+      renderAll();
+      setTab('open');
+      toast('Reopened');
+      return;
+    }
+    if (act === 'delete') {
+      askConfirm('Delete job', 'Remove this job? This cannot be undone.', () => {
+        store.entries = store.entries.filter((x) => x.id !== id);
+        saveStore();
+        closeOverlay('detailOverlay');
+        renderAll();
+        toast('Deleted');
+      });
+    }
+  }
+
+  document.body.addEventListener('click', (ev) => {
+    const btn = ev.target.closest('[data-card-act]');
+    if (btn) {
+      ev.preventDefault();
+      ev.stopPropagation();
+      handleCardAct(btn.getAttribute('data-card-act'), btn.getAttribute('data-id'));
+      return;
+    }
+  }, true);
+
+$('#newJobBtn').addEventListener('click', () => openJobForm(null));
+
+  // ---------- reference ----------
+  $('#addPhotoBtn').addEventListener('click', () => $('#photoFile').click());
+  $('#photoFile').addEventListener('change', async () => {
+    const files = [...($('#photoFile').files || [])];
+    $('#photoFile').value = '';
+    if (!files.length) return;
+    let ok = 0;
+    for (const f of files) {
+      try {
+        const dataUrl = await compressImage(f);
+        await refPut({ id: uid(), dataUrl, createdAt: Date.now() });
+        ok++;
+      } catch (err) {
+        toast(err.message || 'Photo failed', true);
+      }
+    }
+    if (ok) {
+      toast(ok === 1 ? 'Photo added' : ok + ' photos added');
+      renderRef();
+    }
+  });
+
+  $('#refGrid').addEventListener('click', async (ev) => {
+    const item = ev.target.closest('.ref-item');
+    if (!item) return;
+    lightboxId = item.dataset.id;
+    const photos = await refAll();
+    const p = photos.find((x) => x.id === lightboxId);
+    if (!p) return;
+    $('#lightboxImg').src = p.dataUrl;
+    $('#lightbox').classList.add('show');
+  });
+
+  $('#lightboxClose').addEventListener('click', () => {
+    $('#lightbox').classList.remove('show');
+    lightboxId = null;
+  });
+
+  $('#lightboxDelete').addEventListener('click', () => {
+    if (!lightboxId) return;
+    const id = lightboxId;
+    askConfirm('Delete photo?', 'Remove this reference photo?', async () => {
+      await refDelete(id);
+      $('#lightbox').classList.remove('show');
+      lightboxId = null;
+      renderRef();
+      toast('Photo deleted');
+    });
+  });
+
+  // ---------- backup / restore ----------
+  async function doBackup() {
+    const photos = await refAll();
+    const payload = {
+      version: 5,
+      exportedAt: new Date().toISOString(),
+      entries: store.entries,
+      photos: photos.map((p) => ({ id: p.id, dataUrl: p.dataUrl, createdAt: p.createdAt }))
+    };
+    const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'worklog-v5-backup-' + todayStr() + '.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Backup downloaded');
+  }
+
+  function triggerRestore() {
+    $('#restoreFile').click();
+  }
+
+  $('#backupBtn').addEventListener('click', doBackup);
+  $('#restoreBtn').addEventListener('click', triggerRestore);
+  $('#menuBackup').addEventListener('click', () => { closeOverlay('menuOverlay'); doBackup(); });
+  $('#menuRestore').addEventListener('click', () => { closeOverlay('menuOverlay'); triggerRestore(); });
+  $('#menuBtn').addEventListener('click', () => openOverlay('menuOverlay'));
+
+  $('#restoreFile').addEventListener('change', async () => {
+    const file = $('#restoreFile').files && $('#restoreFile').files[0];
+    $('#restoreFile').value = '';
+    if (!file) return;
+    let data;
+    try {
+      data = JSON.parse(await file.text());
+    } catch {
+      toast('Invalid JSON file', true);
+      return;
+    }
+    if (!data || !Array.isArray(data.entries)) {
+      toast('Backup missing entries', true);
+      return;
+    }
+    askConfirm('Restore backup?', 'This overwrites all current jobs and reference photos.', async () => {
+      store = { entries: data.entries };
+      saveStore(store);
+      await refClear();
+      const photos = Array.isArray(data.photos) ? data.photos : [];
+      for (const p of photos) {
+        if (!p || !p.dataUrl) continue;
+        await refPut({
+          id: p.id || uid(),
+          dataUrl: p.dataUrl,
+          createdAt: p.createdAt || Date.now()
+        });
+      }
+      renderAll();
+      if (currentTab === 'ref') renderRef();
+      toast('Restored');
+    });
+  });
+
+  // ---------- PWA ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    });
+  }
+
+  // ---------- init ----------
+  (async function init() {
+    await migrateLegacyRef();
+    renderAll();
+    setTab('open');
+  })();
+})();
+  </script>
+</body>
+</html>
