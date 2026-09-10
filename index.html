@@ -654,7 +654,7 @@
   <div id="app">
     <header class="app-header">
       <div class="header-row">
-        <h1>Work <span>Log</span></h1>
+        <h1>Work <span>Log</span></h1><span style="font-size:0.7rem;font-weight:500;color:var(--muted);margin-left:6px;">v9</span>
         <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" title="Data">⋯</button>
       </div>
       <nav class="tabs" role="tablist">
@@ -1831,8 +1831,30 @@ $('#newJobBtn').addEventListener('click', () => openJobForm(null));
 
   // ---------- PWA ----------
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('./sw.js?v=8').catch(() => {});
+    window.addEventListener('load', async () => {
+      try {
+        const reg = await navigator.serviceWorker.register('./sw.js?v=9');
+        reg.update().catch(() => {});
+        let refreshing = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshing) return;
+          refreshing = true;
+          location.reload();
+        });
+        const kick = (worker) => {
+          if (worker) worker.postMessage({ type: 'SKIP_WAITING' });
+        };
+        if (reg.waiting) kick(reg.waiting);
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) kick(nw);
+          });
+        });
+      } catch (err) {
+        console.warn('sw', err);
+      }
     });
   }
 

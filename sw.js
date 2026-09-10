@@ -1,10 +1,9 @@
-const CACHE = 'worklog-v5-pages7';
+const CACHE = 'worklog-v5-pages8';
 const FILES = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap'
+  './icon-192.png'
 ];
 
 self.addEventListener('install', (e) => {
@@ -21,30 +20,35 @@ self.addEventListener('activate', (e) => {
   );
 });
 
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+// Network-first for app files so home-screen icon picks up updates when online.
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
-  if (isHTML) {
+  if (req.method !== 'GET') return;
+  const url = new URL(req.url);
+  const sameOrigin = url.origin === self.location.origin;
+
+  if (!sameOrigin) {
     e.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match('./index.html'))
+      caches.match(req).then((cached) => cached || fetch(req).catch(() => cached))
     );
     return;
   }
+
   e.respondWith(
-    caches.match(req).then((cached) => {
-      if (cached) return cached;
-      return fetch(req).then((res) => {
-        if (!res || res.status !== 200 || res.type === 'opaque') return res;
-        const copy = res.clone();
-        caches.open(CACHE).then((cache) => cache.put(req, copy));
+    fetch(req)
+      .then((res) => {
+        if (res && res.status === 200) {
+          const copy = res.clone();
+          caches.open(CACHE).then((cache) => cache.put(req, copy));
+        }
         return res;
-      }).catch(() => cached);
-    })
+      })
+      .catch(() =>
+        caches.match(req).then((cached) => cached || caches.match('./index.html'))
+      )
   );
 });
