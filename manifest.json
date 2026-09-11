@@ -4,25 +4,31 @@
   "description": "Seaside Solutions LLC — work orders (open, done, reference)",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#f5f5f7",
+  "background_color": "#ffffff",
   "theme_color": "#f5f5f7",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "icon-192-v12.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "icon-512-v12.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-192.png",
+      "src": "icon-192-v12.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-512-v12.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     }

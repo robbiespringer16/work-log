@@ -1,11 +1,11 @@
-const CACHE = 'workorders-v11';
+const CACHE = 'workorders-v12';
 const FILES = [
   './',
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png',
+  './icon-192-v12.png',
+  './icon-512-v12.png',
+  './apple-touch-icon-v12.png',
   './logo.png'
 ];
 
